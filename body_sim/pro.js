@@ -1,3 +1,7 @@
+/*
+    Author: @ZerQAQ
+*/
+
 var canvas = document.createElement("canvas");
 
 var CW = 90
