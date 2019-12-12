@@ -93,6 +93,7 @@ addButton("selAll()", "show infs");
 addButton("unselAll()", "unshow infs");
 addButton("clearAll()", "Clear all");
 addButton("changeMerge()", "Set merge");
+addButton("randomWorld()", "Random");
 
 addP("modes select:");
 
@@ -614,6 +615,12 @@ function changeMerge(){
     mergeMode = !mergeMode;
 }
 
+function randomWorld(){
+    world.length = 0;
+    frameNum = 0;
+    inti2();
+}
+
 function showReadMe(){
     alert("In&Out部分：在文本框里输入内容，然后点击下面四个按钮可以分别改变一些值。\n \
     set star size：设置手动加入的星球的大小。\n \
@@ -626,6 +633,7 @@ function showReadMe(){
     show infs/unshow infs：显示或不显示星球信息\n \
     Clear all：删除所有星球\n \
     Set merge：设置星球是否可以合并\n \
+    Random: 随机生成500个星球 \n \
     \n \
     模式选择（modes select）部分：\n \
     Show inf：该模式下点击星球可以显示星球的信息\n \
