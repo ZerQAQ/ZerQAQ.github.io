@@ -498,8 +498,7 @@ function getSeed(){
     for(let i = 0; i < world.length; i++){
         world[i].line.length = world[i].tline.length = 0;
     }
-    let elm = document.getElementById("IO");
-    elm.innerHTML = JSON.stringify(world);
+    textelm.innerHTML = JSON.stringify(world);
     for(let i = 0; i < world.length; i++){
         world[i].line = temp[i];
         world[i].tline = tempt[i];
@@ -507,7 +506,7 @@ function getSeed(){
 }
 
 function loadSeed(){
-    let js = document.getElementById("IO").value;
+    let js = textelm.value;
     let temp = JSON.parse(js);
 
     world.length = 0;
