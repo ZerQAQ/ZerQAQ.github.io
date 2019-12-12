@@ -636,7 +636,7 @@ function showReadMe(){
     \n \
     数据存取（SL data）部分：\n \
     Get seed：获得目前的星球数据，输出到文本框中\n \
-    Load seed：载入文本框中的星球数据。");
+    Load seed：载入文本框中的星球数据。load之后记得要点Start来开始模拟哦");
 }
 
 canvas.onmousemove = function(e){
