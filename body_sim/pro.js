@@ -507,18 +507,18 @@ function draw(){
         if(temp[i].psel) parentStar = i;
     }
     
+    for(let i = 0; i < solars.length; i++){ //绘制solars
+        for(let j = 0; j < solars[i].line.length - 1; j++){
+            drawLine(solars[i].line[j], solars[i].line[j + 1], "#f0f0f0");
+        }
+        solars[i].render();
+    }
     for(let i = 0; i < world.length; i++){ //绘制
         if(world[i].del) continue;
         for(let j = 0; j < world[i].line.length - 1; j++){
             drawLine(world[i].line[j], world[i].line[j + 1], "#f0f0f0");
         }
         world[i].render();
-    }
-    for(let i = 0; i < solars.length; i++){ //绘制solars
-        for(let j = 0; j < solars[i].line.length - 1; j++){
-            drawLine(solars[i].line[j], solars[i].line[j + 1], "#f0f0f0");
-        }
-        solars[i].render();
     }
 
     for(let i = 0; i < world.length; i++){//显示信息
