@@ -7,9 +7,16 @@ var canvas = document.createElement("canvas");
 var CW = 90
 var W = window.innerWidth - CW;
 var H = window.innerHeight;
+var cameraMaxX = W;
+var cameraMinX = 0;
+var cameraMaxY = H;
+var cameraMinY = 0;
+var cameraScale = 1;
 var bgc = "#000707";
 var stop = 0;
 var mouseX = 0, mouseY = 0;
+var tmouseX = 0, tmouseY = 0;
+var mouseClickX = 0, mouseClickY = 0;
 var fontsize = 12
 canvas.width = W;
 canvas.height = H;
@@ -33,7 +40,8 @@ const clearStarModeValue = 1;
 const addMoonModeValue = 2;
 const addSunModeValue = 3;
 const addStarModeValue = 4;
-const modeStr = ["Show inf", "Clear star", "Add moon", "Add sun", "Add star"];
+const moveCameraModeValue = 5;
+const modeStr = ["Show inf", "Clear star", "Add moon", "Add sun", "Add star", "Move camera"];
 //document.body.appendChild(canvas);
 
 var divelm = document.createElement("div");
@@ -65,7 +73,7 @@ function addButton(func, innertext, id){
 function addP(str){
     let pelm = document.createElement("p");
     pelm.innerHTML = str;
-    pelm.style.cssText = "color: rgb(240, 240, 240); font-size:13.5px";
+    pelm.style.cssText = "color: rgb(240, 240, 240); font-size:13.5px; height: 6px";
     document.getElementById("div0").append(pelm);
 }
 
@@ -92,8 +100,11 @@ addButton("stopAnimation()", "Stop", "stop");
 addButton("selAll()", "show infs");
 addButton("unselAll()", "unshow infs");
 addButton("clearAll()", "Clear all");
+addButton("clearSolar()", "Clear solar");
 addButton("changeMerge()", "Set merge");
 addButton("randomWorld()", "Random");
+addButton("threeSolarVer1()", "three solar1");
+addButton("threeSolarVer2()", "three solar2");
 
 addP("modes select:");
 
@@ -102,13 +113,14 @@ addButton("clearStarMode()", "Clear star");
 addButton("addMoonMode()", "Add moon");
 addButton("addSunMode()", "Add sun");
 addButton("addStarMode()", "Add star");
+addButton("moveCameraMode()", "Move Came");
 
-addP("SL data");
+addP("SL data:");
 
 addButton("getSeed()", "Get seed");
 addButton("loadSeed()", "Load seed");
 
-addP("Help");
+addP("Help:");
 addButton("showReadMe()", "get README");
 
 const PI = Math.PI;
@@ -173,6 +185,17 @@ function rot(v, ct){
     return new vector(v.x * Math.cos(ct) + v.y * Math.sin(ct), - v.x * Math.sin(ct) + v.y * Math.cos(ct));
 }
 
+function positionTranfrom(v){
+    let x = (v.x - cameraMinX) * W / (cameraMaxX - cameraMinX);
+    let y = (v.y - cameraMinY) * H / (cameraMaxY - cameraMinY);
+    return new vector(x, y);
+}
+function fpositionTranfrom(v){
+    let x = cameraMinX + v.x * (cameraMaxX - cameraMinX) / W;
+    let y = cameraMinY + v.y * (cameraMaxY - cameraMinY) / H;
+    return new vector(x, y);
+}
+
 function getRandomColor(){
     return '#' + function(c){
         c += '56789abcdef'[Math.floor(Math.random() * 11)];
@@ -187,10 +210,22 @@ function colorReverse(oldColor){
 }
 
 function drawCircle(p, r, c){
+    p = positionTranfrom(p);
     ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle = c;
-    ctx.arc(p.x, p.y, r, 0, PI * 2);
+    ctx.arc(p.x, p.y, r / cameraScale, 0, PI * 2);
     ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawLine(a, b, lc){
+    a = positionTranfrom(a);
+    b = positionTranfrom(b);
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle = lc;
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
     ctx.stroke();
     ctx.closePath();
 }
@@ -237,6 +272,7 @@ var o = new body(W / 2, H / 2, 20);
 o.v = new vector(5, 0);
 
 var world = [];
+var solars = [];
 var temp = [];
 
 function countv(p, s, dir){
@@ -250,7 +286,12 @@ function countMoon(sun, r, p, dir){
     return ret;
 }
 
-function prtText(s, x, y){
+function prtText(s, x, y, abs){
+    if(abs == null){
+        let v = new vector(x, y);
+        v = positionTranfrom(v);
+        x = v.x; y = v.y;
+    }
     ctx.font = fontsize.toFixed(0).toString() + "px Arial"
     ctx.fillStyle = "#f0f0f0";
     ctx.textAlign = "left";
@@ -258,34 +299,21 @@ function prtText(s, x, y){
     ctx.fillText(s, x, y);
 }
 
-function drawLine(a, b, lc){
-    ctx.beginPath();
-    ctx.fillStyle = ctx.strokeStyle = lc;
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    ctx.closePath();
-}
-
 function prtBasicInf(){
     let _fontsize = fontsize;
     fontsize = 13;
     let lh = fontsize / 4 * 5;
     let p = 0
-    prtText("mode : " + modeStr[mode], 10 , 10 + p++ * lh);
-    prtText("maxlen : " + trackMaxLen.toString(), 10, 10 + p++ * lh);
-    prtText("maxtime : " + trackMaxTime.toString(), 10, 10 + p++ * lh);
-    prtText("planet number : " + world.length, 10, 10 + p++ * lh);
-    prtText("merge : " + (mergeMode ? "On" : "Off"), 10, 10 + p++ * lh);
-    prtText("gravity constance : " + Gravity.toFixed(2).toString(), 10, 10 + p++ * lh);
-    if(mode == addMoonModeValue){
-        prtText("star size : " + addStarsSize.toString(), 10, 10 + p++ * lh);
-        prtText("star direction : " + (addStarsDir == 1? "Clockwise" : "Counterclockwise"),
-        10, 10 + p++ * lh);
-    }
-    if(mode == addSunModeValue || mode == addSunModeValue){
-        prtText("star size : " + addStarsSize.toString(), 10, 10 + p++ * lh);
-    }
+    prtText("mode : " + modeStr[mode], 10 , 10 + p++ * lh, 1);
+    prtText("maxlen : " + trackMaxLen.toString(), 10, 10 + p++ * lh, 1);
+    prtText("maxtime : " + trackMaxTime.toString(), 10, 10 + p++ * lh, 1);
+    prtText("planet number : " + world.length, 10, 10 + p++ * lh, 1);
+    prtText("merge : " + (mergeMode ? "On" : "Off"), 10, 10 + p++ * lh, 1);
+    prtText("gravity constance : " + Gravity.toFixed(2).toString(), 10, 10 + p++ * lh, 1);
+    prtText("camera scale : " + cameraScale.toFixed(2).toString(), 10, 10 + p++ * lh, 1);
+    prtText("star size : " + addStarsSize.toString(), 10, 10 + p++ * lh, 1);
+    prtText("star direction : " + (addStarsDir == 1? "Clockwise" : "Counterclockwise"),
+    10, 10 + p++ * lh, 1);
     fontsize = _fontsize;
 }
 
@@ -307,7 +335,64 @@ function inti2(){
     }
 }
 
+function threeSolarVer1(){
+    solars.length = 0;
+    let a = 500;
+    let ns = new body(0, 0, 50);
+    let speed = Math.sqrt(ns.m * G / a);
+    let mp = new vector(W / 2, H / 2);
+
+    let dv = new vector(-a / 2, Math.sqrt(3) * a / 6);
+    let v = mul(rot(nor(dv), PI / 2), speed);
+    ns.p = add(mp, dv);
+    ns.v = v;
+    solars.push(ns);
+
+    ns = new body(0, 0, 50);
+    dv = new vector(a / 2, Math.sqrt(3) * a / 6);
+    v = mul(rot(nor(dv), PI / 2), speed);
+    ns.p = add(mp, dv);
+    ns.v = v;
+    solars.push(ns);
+
+    ns = new body(0, 0, 50);
+    dv = new vector(0, - Math.sqrt(3) * a / 3);
+    v = mul(rot(nor(dv), PI / 2), speed);
+    ns.p = add(mp, dv);
+    ns.v = v;
+    solars.push(ns);
+}
+
+function threeSolarVer2(){
+    solars.length = 0;
+    let a = 500;
+    let ns = new body(0, 0, 50);
+    let speed = Math.sqrt(2 * ns.m * G / (a * Math.sqrt(3)));
+    let mp = new vector(W / 2, H / 2);
+
+    let dv = new vector(-a / 2, Math.sqrt(3) * a / 6);
+    let v = mul(rot(nor(dv), PI / 2), speed);
+    ns.p = add(mp, dv);
+    ns.v = v;
+    solars.push(ns);
+
+    ns = new body(0, 0, 50);
+    dv = new vector(a / 2, Math.sqrt(3) * a / 6);
+    v = mul(rot(nor(dv), PI / 2), speed);
+    ns.p = add(mp, dv);
+    ns.v = v;
+    solars.push(ns);
+
+    ns = new body(0, 0, 50);
+    dv = new vector(0, - Math.sqrt(3) * a / 3);
+    v = mul(rot(nor(dv), PI / 2), speed);
+    ns.p = add(mp, dv);
+    ns.v = v;
+    solars.push(ns);
+}
+
 function prtBodyInfo(b, X, Y){
+    let lh = fontsize / 2 * 2.5 * cameraScale;
     prtText(
         "position:" + b.p.x.toFixed(2).toString() + " " + b.p.y.toFixed(2).toString(),
         X,
@@ -316,18 +401,18 @@ function prtBodyInfo(b, X, Y){
     prtText(
         "velocity:" + b.v.x.toFixed(2).toString() + " " + b.v.y.toFixed(2).toString(),
         X,
-        Y + fontsize / 2 * 2.5
+        Y + lh
     );
     console.log(typeof(b.r));
     prtText(
         "radiu:" + b.r.toFixed(2).toString() + " mass:" + b.m.toFixed(2).toString(),
         X,
-        Y + fontsize / 2 * 2.5 * 2
+        Y + lh * 2
     );
     prtText(
         (b.fix ? "fixed" : "not fixed") + (b.sel ? " [Always show]" : ""),
         X,
-        Y + fontsize / 2 * 2.5 * 3
+        Y + lh * 3
     );
 }
 
@@ -344,6 +429,7 @@ function copy(a, b){
 
 function draw(){
     if(!stop) frameNum++;
+    if(addStarsSize < 0) addStarsSize = 0;
     clear();
     for(let i = 0; i < world.length; i++){ //删除太远的body
         if(sqrlen(world[i].p) > 2500000000) world[i].del = 1;
@@ -356,16 +442,36 @@ function draw(){
             if(world[j].del) continue;
             if(i == j) continue;
             let r = len(sub(world[i].p, world[j].p));
-            if(r < 10 || r > 1000) continue;
-            f = add(f, mul(nor(sub(world[j].p, world[i].p)), world[i].m * world[j].m * G / (r * r)))
+            if(r < 10 || r > 10000) continue;
+            f = add(f, mul(nor(sub(world[j].p, world[i].p)), world[i].m * world[j].m * G / (r * r)));
+        }
+        for(let j = 0; j < solars.length; j++){ //计算solar对world的重力
+            let r = len(sub(world[i].p, solars[j].p));
+            if(r < 10 || r > 10000) continue;
+            f = add(f, mul(nor(sub(solars[j].p, world[i].p)), world[i].m * solars[j].m * G / (r * r)));
         }
         world[i].f = f;
+    }
+    for(let i = 0; i < solars.length; i++){ //计算solar世界内的重力
+        if(stop) break;
+        let f = new vector();
+        for(let j = 0; j < solars.length; j++){
+            if(i == j) continue;
+            let r = len(sub(solars[i].p, solars[j].p));
+            if(r < 10 || r > 10000) continue;
+            f = add(f, mul(nor(sub(solars[j].p, solars[i].p)), solars[i].m * solars[j].m * G / (r * r)));
+        }
+        solars[i].f = f;
     }
 
     for(let i = 0; i < world.length; i++){ //应用互作用力
         if(world[i].fix || world[i].del) continue;
         if(stop) break;
         world[i].update(div(world[i].f, world[i].m));
+    }
+    for(let i = 0; i < solars.length; i++){ //应用solar里的互作用力
+        if(stop) break;
+        solars[i].update(div(solars[i].f, solars[i].m));
     }
 
     temp.length = 0;
@@ -406,6 +512,12 @@ function draw(){
             drawLine(world[i].line[j], world[i].line[j + 1], "#f0f0f0");
         }
         world[i].render();
+    }
+    for(let i = 0; i < solars.length; i++){ //绘制solars
+        for(let j = 0; j < solars[i].line.length - 1; j++){
+            drawLine(solars[i].line[j], solars[i].line[j + 1], "#f0f0f0");
+        }
+        solars[i].render();
     }
 
     for(let i = 0; i < world.length; i++){//显示信息
@@ -473,6 +585,23 @@ function draw(){
             newStar.v = div(sub(newStar.p, new vector(mouseX, mouseY)), 30);
             world.push(newStar);
             mouseUp = 0;
+        }
+    }
+    else if(mode == moveCameraModeValue){
+        if(mouseClick){
+            mouseClickX = tmouseX;
+            mouseClickY = tmouseY;
+        }
+        if(mouseDown){
+            let dx = tmouseX - mouseClickX;
+            let dy = tmouseY - mouseClickY;
+            dx *= -1.5 * cameraScale; dy *= -1.5 * cameraScale;
+            cameraMaxX += dx;
+            cameraMinX += dx;
+            cameraMaxY += dy;
+            cameraMinY += dy;
+            mouseClickX = tmouseX;
+            mouseClickY = tmouseY;
         }
     }
 
@@ -584,6 +713,7 @@ function clearStarMode(){
 
 function addMoonMode(){
     mode = addMoonModeValue;
+    parentStar = -1;
 }
 
 function addSunMode(){
@@ -592,6 +722,10 @@ function addSunMode(){
 
 function addStarMode(){
     mode = addStarModeValue;
+}
+
+function moveCameraMode(){
+    mode = moveCameraModeValue;
 }
 
 function setTrackMaxTimeAndLen(){
@@ -609,6 +743,7 @@ function changeStarDir(){
 
 function clearAll(){
     world.length = 0;
+    solars.length = 0;
 }
 
 function changeMerge(){
@@ -621,12 +756,16 @@ function randomWorld(){
     inti2();
 }
 
+function clearSolar(){
+    solars.length = 0;
+}
+
 function showReadMe(){
-    alert("In&Out部分：在文本框里输入内容，然后点击下面四个按钮可以分别改变一些值。\n \
-    set star size：设置手动加入的星球的大小。\n \
-    set star dir:在加入卫星模式下，设置卫星的旋转方向（顺时针或逆时针）\n \
+    alert("In&Out部分: 在文本框里输入内容，然后点击下面四个按钮可以分别改变一些值。\n \
+    set star size: 设置手动加入的星球的大小。\n \
+    set star dir: 在加入卫星模式下，设置卫星的旋转方向（顺时针或逆时针）\n \
     set tracklen: 设置轨迹长度\n \
-    set Gravity:设置重力常数\n \
+    set Gravity: 设置重力常数\n \
     \n \
     控制（control）部分：\n \
     Stop/Start 开始或者停止模拟\n \
@@ -649,6 +788,9 @@ function showReadMe(){
 
 canvas.onmousemove = function(e){
    let v = windowToCanvas(e.clientX, e.clientY);
+   tmouseX = v.x;
+   tmouseY = v.y;
+   v = fpositionTranfrom(v);
    mouseX = v.x;
    mouseY = v.y;
 }
@@ -663,3 +805,51 @@ canvas.onmouseup = function(e){
     mouseUp = 1;
     console.log("mouseu");
 }
+
+canvas.onwheel = function(e){
+    if(mode == moveCameraModeValue){
+        e.preventDefault();
+        let dMinx = mouseX - cameraMinX;
+        let dMaxx = cameraMaxX - mouseX;
+        let dMiny = mouseY - cameraMinY;
+        let dMaxy = cameraMaxY - mouseY;
+        let dx = cameraMaxX - cameraMinX;
+        let dy = cameraMaxY - cameraMinY;
+        dMinx /= 5; dMaxx /= 5;
+        dMiny /= 5; dMaxy /= 5;
+        dx /= 10; dy /= 10;
+        if(e.deltaY > 0){
+            cameraMinX -= dx;
+            cameraMaxX += dx;
+            cameraMinY -= dy;
+            cameraMaxY += dy;
+            cameraScale *= 1.2;
+        }
+        if(e.deltaY < 0){
+            cameraMinX += dMinx;
+            cameraMaxX -= dMaxx;
+            cameraMinY += dMiny;
+            cameraMaxY -= dMaxy;
+            cameraScale *= 0.8;
+        }
+    }
+}
+
+document.onkeydown=function(event){
+    var e = event || window.event || arguments.callee.caller.arguments[0];　　　　
+    console.log("key");
+    if(e && e.keyCode == 32){
+        if(stop){
+            startAnimation();
+        }
+        else{
+            stopAnimation();
+        }
+    }
+    else if(e && e.keyCode == 81){
+        addStarsSize += 3;
+    }
+    else if(e && e.keyCode == 65){
+        addStarsSize -= 3;
+    }
+}; 
