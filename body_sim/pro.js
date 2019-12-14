@@ -4,7 +4,6 @@
 
 
 var canvas = document.createElement("canvas");
-
 var CW = 90
 var W = window.innerWidth - CW;
 var H = window.innerHeight;
@@ -432,9 +431,11 @@ function draw(){
     if(!stop) frameNum++;
     if(addStarsSize < 0) addStarsSize = 0;
     clear();
+    /*
     for(let i = 0; i < world.length; i++){ //删除太远的body
         if(sqrlen(world[i].p) > 2500000000) world[i].del = 1;
     }
+    */
     for(let i = 0; i < world.length; i++){ //计算互作用力
         if(world[i].fix || world[i].del) continue;
         if(stop) break;
@@ -853,4 +854,22 @@ document.onkeydown=function(event){
     else if(e && e.keyCode == 65){
         addStarsSize -= 3;
     }
-}; 
+    else if(e && e.keyCode == 87){ //W
+        showInfMode();
+    }
+    else if(e && e.keyCode == 69){ //E
+        clearStarMode();
+    }
+    else if(e && e.keyCode == 82){ //R
+        addMoonMode();
+    }
+    else if(e && e.keyCode == 84){ //T
+        addSunMode();
+    }
+    else if(e && e.keyCode == 83){
+        addStarMode();
+    }
+    else if(e && e.keyCode == 68){
+        moveCameraMode();
+    }
+};
