@@ -977,7 +977,7 @@ document.onkeydown=function(event){
     }
     else if(e && e.keyCode == 89){ //Y
         addStarMode();
-        e.returnValue = false;
+        e.returnValue = false; 
     }
     else if(e && e.keyCode == 90){ //Z
         timeScale -= 0.5;
