@@ -35,13 +35,18 @@ var newStar = 0;
 var mergeMode = 1;
 var showAllInf = 0;
 var timeScale = 1;
-const showInfModeValue = 0;
+var tipShowTime = 0;
+var maxTipShowTime = 300;
+var tipFadeTime = 0;
+var maxtipFadeTime = 50;
+var modeChanged = 0;
+var showTip = 1;
+const defaultModeValue = 0;
 const clearStarModeValue = 1;
 const addMoonModeValue = 2;
 const addSunModeValue = 3;
 const addStarModeValue = 4;
-const moveCameraModeValue = 5;
-const modeStr = ["Show inf", "Clear star", "Add moon", "Add sun", "Add star", "Move camera"];
+const modeStr = ["Default", "Clear star", "Add moon", "Add sun", "Add star"];
 //document.body.appendChild(canvas);
 
 var divelm = document.createElement("div");
@@ -108,12 +113,11 @@ addButton("threeSolarVer2()", "three solar2");
 
 addP("modes select:");
 
-addButton("showInfMode()", "Show inf");
+addButton("defaultMode()", "Default");
 addButton("clearStarMode()", "Clear star");
 addButton("addMoonMode()", "Add moon");
 addButton("addSunMode()", "Add sun");
 addButton("addStarMode()", "Add star");
-addButton("moveCameraMode()", "Move Came");
 
 addP("SL data:");
 
@@ -122,6 +126,7 @@ addButton("loadSeed()", "Load seed");
 
 addP("Help:");
 addButton("showReadMe()", "get README");
+addButton("setShowtip()", "unshow tip", "tipBotton");
 
 const PI = Math.PI;
 var Gravity = 1;
@@ -250,8 +255,8 @@ class body{
         drawCircle(this.p, this.r, this.color);
     }
     update(dv){
-        this.v = add(this.v, dv);
-        this.p = add(this.p, this.v);
+        this.v = add(this.v, mul(dv, timeScale));
+        this.p = add(this.p, mul(this.v, timeScale));
         if(this.line.length == 0 || sqrlen(sub(this.p, this.line[this.line.length - 1])) > 10){
             this.line.push(this.p);
             this.tline.push(frameNum);
@@ -286,15 +291,17 @@ function countMoon(sun, r, p, dir){
     return ret;
 }
 
-function prtText(s, x, y, abs){
+function prtText(s, x, y, abs, tAlign, col){
+    if(col == null) col = "#f0f0f0";
+    if(tAlign == null) tAlign = "left";
     if(abs == null){
         let v = new vector(x, y);
-        v = positionTranfrom(v);
+        v = positionTranfrom(v);                                                                                                                                    
         x = v.x; y = v.y;
     }
     ctx.font = fontsize.toFixed(0).toString() + "px Arial"
-    ctx.fillStyle = "#f0f0f0";
-    ctx.textAlign = "left";
+    ctx.fillStyle = col;
+    ctx.textAlign = tAlign;
     ctx.textBaseline = "hanging";
     ctx.fillText(s, x, y);
 }
@@ -310,10 +317,12 @@ function prtBasicInf(){
     prtText("planet number : " + world.length, 10, 10 + p++ * lh, 1);
     prtText("merge : " + (mergeMode ? "On" : "Off"), 10, 10 + p++ * lh, 1);
     prtText("gravity constance : " + Gravity.toFixed(2).toString(), 10, 10 + p++ * lh, 1);
+    prtText("time scale : " + timeScale.toFixed(1).toString(), 10, 10 + p++ * lh, 1);
     prtText("camera scale : " + cameraScale.toFixed(2).toString(), 10, 10 + p++ * lh, 1);
     prtText("star size : " + addStarsSize.toString(), 10, 10 + p++ * lh, 1);
     prtText("star direction : " + (addStarsDir == 1? "Clockwise" : "Counterclockwise"),
     10, 10 + p++ * lh, 1);
+    prtText("快捷键:q a改变星球大小 w e r t y改变模式", 10, 10 + p++ * lh, 1);
     fontsize = _fontsize;
 }
 
@@ -394,16 +403,15 @@ function threeSolarVer2(){
 function prtBodyInfo(b, X, Y){
     let lh = fontsize / 2 * 2.5 * cameraScale;
     prtText(
-        "position:" + b.p.x.toFixed(2).toString() + " " + b.p.y.toFixed(2).toString(),
+        "position:(" + b.p.x.toFixed(2).toString() + "," + b.p.y.toFixed(2).toString() + ")",
         X,
         Y
     );
     prtText(
-        "velocity:" + b.v.x.toFixed(2).toString() + " " + b.v.y.toFixed(2).toString(),
+        "velocity:(" + b.v.x.toFixed(2).toString() + "," + b.v.y.toFixed(2).toString() + ")",
         X,
         Y + lh
     );
-    console.log(typeof(b.r));
     prtText(
         "radiu:" + b.r.toFixed(2).toString() + " mass:" + b.m.toFixed(2).toString(),
         X,
@@ -414,6 +422,86 @@ function prtBodyInfo(b, X, Y){
         X,
         Y + lh * 3
     );
+}
+
+function getTipColor(){
+    if(tipShowTime > 0) return "#f0f0f0";
+    let v = 0xf0 * (tipFadeTime / maxtipFadeTime);
+    let s1 = (v.toFixed(0) <= 0xf ? '0' : '') + v.toString(16);
+    s1 = s1.slice(0, 2);
+    return '#' + s1 + s1 + s1;
+}
+
+function prtTip(){
+    if(modeChanged == 1){
+        tipShowTime = maxTipShowTime;
+        tipFadeTime = maxtipFadeTime;
+    }
+    if(tipFadeTime > 0){
+        let _fontsize = fontsize;
+        fontsize = 15;
+        let h = fontsize * 3 / 2;
+        if(tipShowTime) tipShowTime--;
+        else tipFadeTime--;
+        let col = getTipColor();
+        if(mode == defaultModeValue){
+            prtText("你现在处于默认模式下。",
+            W / 2, h, 1, "center", col);
+            prtText("你可以通过滚动滑轮和拖动屏幕来移动摄像机",
+            W / 2, h * 2, 1, "center", col);
+            prtText("或是移动光标和点击来获得星球的信息",
+            W / 2, h * 3, 1, "center", col);
+            prtText("你可以通过点击左下角的unshow tip来关闭此信息",
+            W / 2, h * 4, 1, "center", col);
+        }
+        else if (mode == clearStarModeValue){
+            prtText("你现在处于星球删除模式下。",
+            W / 2, h, 1, "center", col);
+            prtText("你可以通过滚动滑轮和拖动屏幕来移动摄像机",
+            W / 2, h * 2, 1, "center", col);
+            prtText("或是点击星球来删除星球",
+            W / 2, h * 3, 1, "center", col);
+            prtText("你可以通过点击左下角的unshow tip来关闭此信息",
+            W / 2, h * 4, 1, "center", col);
+        }
+        else if (mode == addMoonModeValue){
+            prtText("你现在处于卫星添加模式下。",
+            W / 2, h, 1, "center", col);
+            prtText("你可以通过点击星球来选中一个母星",
+            W / 2, h * 2, 1, "center", col);
+            prtText("选中母星后，点击空白处添加他的卫星",
+            W / 2, h * 3, 1, "center", col);
+            prtText("你可以通过设置dir的值来调整卫星的旋转方向",
+            W / 2, h * 4, 1, "center", col);
+            prtText("或设置star size的值来调整星球的大小(快捷键是q和a)",
+            W / 2, h * 5, 1, "center", col);
+            prtText("你可以通过点击左下角的unshow tip来关闭此信息",
+            W / 2, h * 6, 1, "center", col);
+        }
+        else if (mode == addStarModeValue){
+            prtText("你现在处于行星添加模式下。",
+            W / 2, h, 1, "center", col);
+            prtText("你可以通过点击空白处来添加星球",
+            W / 2, h * 2, 1, "center", col);
+            prtText("还可以通过拖动屏幕来设置星球的速度",
+            W / 2, h * 3, 1, "center", col);
+            prtText("或设置star size的值来调整星球的大小(快捷键是q和a)",
+            W / 2, h * 4, 1, "center", col);
+            prtText("你可以通过点击左下角的unshow tip来关闭此信息",
+            W / 2, h * 5, 1, "center", col);
+        }
+        else if (mode == addSunModeValue){
+            prtText("你现在处于恒星添加模式下。",
+            W / 2, h, 1, "center", col);
+            prtText("你可以通过点击空白处来添加恒星",
+            W / 2, h * 2, 1, "center", col);
+            prtText("还设置star size的值来调整星球的大小(快捷键是q和a)",
+            W / 2, h * 3, 1, "center", col);
+            prtText("你可以通过点击左下角的unshow tip来关闭此信息",
+            W / 2, h * 4, 1, "center", col);
+        }
+        fontsize = _fontsize;
+    }
 }
 
 function copy(a, b){
@@ -436,6 +524,7 @@ function draw(){
         if(sqrlen(world[i].p) > 2500000000) world[i].del = 1;
     }
     */
+    if(showTip) prtTip();
     for(let i = 0; i < world.length; i++){ //计算互作用力
         if(world[i].fix || world[i].del) continue;
         if(stop) break;
@@ -526,7 +615,7 @@ function draw(){
         let showed = 0;
         if(world[i].psel && i != parentStar) world[i].psel = 0;
         if(sqrlen(sub(new vector(mouseX, mouseY), world[i].p)) <= Math.max(world[i].r * world[i].r, 50)){
-            if(mode == showInfModeValue){
+            if(mode == defaultModeValue){
                 prtBodyInfo(world[i], world[i].p.x + 0.7071 * world[i].r, world[i].p.y + 0.7071 * world[i].r)
                 if(mouseClick) world[i].sel = !world[i].sel;
                 showed = 1;
@@ -589,7 +678,7 @@ function draw(){
             mouseUp = 0;
         }
     }
-    else if(mode == moveCameraModeValue){
+    else if(mode == defaultModeValue || mode == clearStarModeValue){ //移动摄像机
         if(mouseClick){
             mouseClickX = tmouseX;
             mouseClickY = tmouseY;
@@ -608,6 +697,7 @@ function draw(){
     }
 
     prtBasicInf();
+    if(modeChanged) modeChanged = 0;
     if(mouseClick) mouseClick = 0;
     if(mouseUp) mouseUp = 0;
     //prtText(mouseX.toString() + " " + mouseY.toString(), mouseX, mouseY);
@@ -705,29 +795,30 @@ function setGravity(){
     G = 0.3 * Gravity;
 }
 
-function showInfMode(){
-    mode = showInfModeValue;
+function defaultMode(){
+    mode = defaultModeValue;
+    modeChanged = 1;
 }
 
 function clearStarMode(){
     mode = clearStarModeValue;
+    modeChanged = 1;
 }
 
 function addMoonMode(){
     mode = addMoonModeValue;
     parentStar = -1;
+    modeChanged = 1;
 }
 
 function addSunMode(){
     mode = addSunModeValue;
+    modeChanged = 1;
 }
 
 function addStarMode(){
     mode = addStarModeValue;
-}
-
-function moveCameraMode(){
-    mode = moveCameraModeValue;
+    modeChanged = 1;
 }
 
 function setTrackMaxTimeAndLen(){
@@ -762,6 +853,17 @@ function clearSolar(){
     solars.length = 0;
 }
 
+function setShowtip(){
+    showTip = !showTip;
+    let elm = document.getElementById("tipBotton");
+    if(showTip){
+        elm.innerHTML = "Unshow tip";
+    }
+    else{
+        elm.innerHTML = "Show tip";
+    }
+}
+
 function showReadMe(){
     alert("In&Out部分: 在文本框里输入内容，然后点击下面四个按钮可以分别改变一些值。\n \
     set star size: 设置手动加入的星球的大小。\n \
@@ -777,9 +879,9 @@ function showReadMe(){
     Random: 随机生成500个星球 \n \
     \n \
     模式选择（modes select）部分：\n \
-    Show inf：该模式下点击星球可以显示星球的信息\n \
+    default：该模式下点击星球可以显示星球的信息\n \
     clear star：该模式下可以通过点击星球来删除星球\n \
-    add mood：在该模式下，先通过点击选中一个星球作为母星，再在空白处点击，会生成大小为starsize的，顺/逆时针围绕着母星旋转的卫星\n \
+    add moon：在该模式下，先通过点击选中一个星球作为母星，再在空白处点击，会生成大小为starsize的，顺/逆时针围绕着母星旋转的卫星\n \
     add sun：在该模式下，点击空白的地方来加入恒星，恒星不会运动，不会与其他星球融合\n \
     add star：通过鼠标来添加行星，可以通过拖动来控制初始速度，行星大小为starsize\n \
     \n \
@@ -809,7 +911,7 @@ canvas.onmouseup = function(e){
 }
 
 canvas.onwheel = function(e){
-    if(mode == moveCameraModeValue){
+    if(mode == defaultModeValue || mode == clearStarModeValue){
         e.preventDefault();
         let dMinx = mouseX - cameraMinX;
         let dMaxx = cameraMaxX - mouseX;
@@ -847,29 +949,46 @@ document.onkeydown=function(event){
         else{
             stopAnimation();
         }
+        e.returnValue = false;
     }
     else if(e && e.keyCode == 81){
         addStarsSize += 3;
+        e.returnValue = false;
     }
     else if(e && e.keyCode == 65){
         addStarsSize -= 3;
+        e.returnValue = false;
     }
     else if(e && e.keyCode == 87){ //W
-        showInfMode();
+        defaultMode();
+        e.returnValue = false;
     }
     else if(e && e.keyCode == 69){ //E
         clearStarMode();
+        e.returnValue = false;
     }
     else if(e && e.keyCode == 82){ //R
         addMoonMode();
+        e.returnValue = false;
     }
     else if(e && e.keyCode == 84){ //T
         addSunMode();
+        e.returnValue = false;
     }
-    else if(e && e.keyCode == 83){
+    else if(e && e.keyCode == 89){ //Y
         addStarMode();
+        e.returnValue = false;
     }
-    else if(e && e.keyCode == 68){
-        moveCameraMode();
+    else if(e && e.keyCode == 90){ //Z
+        timeScale -= 0.5;
+        e.returnValue = false;
+    }
+    else if(e && e.keyCode == 88){ //X
+        timeScale += 0.5;
+        e.returnValue = false;
+    }
+    else if(e && e.keyCode == 67){ //C
+        timeScale = timeScale * -1;
+        e.returnValue = false;
     }
 };
