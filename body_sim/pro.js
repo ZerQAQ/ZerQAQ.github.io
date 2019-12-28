@@ -322,7 +322,10 @@ function prtBasicInf(){
     prtText("star size : " + addStarsSize.toString(), 10, 10 + p++ * lh, 1);
     prtText("star direction : " + (addStarsDir == 1? "Clockwise" : "Counterclockwise"),
     10, 10 + p++ * lh, 1);
-    prtText("快捷键:q a改变星球大小 w e r t y改变模式", 10, 10 + p++ * lh, 1);
+    prtText("快捷键: q a改变星球大小", 10, 10 + p++ * lh, 1);
+    prtText("快捷键: w e r t y切换模式", 10, 10 + p++ * lh, 1);
+    prtText("快捷键: z x 改变时间流逝速度", 10, 10 + p++ * lh, 1);
+    prtText("快捷键: c 改变时间流逝方向", 10, 10 + p++ * lh, 1);
     fontsize = _fontsize;
 }
 
